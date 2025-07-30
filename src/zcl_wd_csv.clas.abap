@@ -60,7 +60,7 @@ CLASS zcl_wd_csv DEFINITION PUBLIC CREATE PUBLIC.
       END OF ty_string_struc,
       BEGIN OF ty_comp_conversion_exit,
         name     TYPE string,
-        convexit TYPE convexit,
+        convexit TYPE c LENGTH 5, " convexit,
         temp_fld TYPE REF TO data,
       END OF ty_comp_conversion_exit,
       ty_comp_conversion_exits TYPE SORTED TABLE OF ty_comp_conversion_exit WITH UNIQUE KEY name.
@@ -99,56 +99,59 @@ CLASS zcl_wd_csv IMPLEMENTATION.
 
 
   METHOD call_conv_exits.
-* ---------------------------------------------------------------------
-    DATA:
-      structdescr        TYPE REF TO cl_abap_structdescr,
-      conv_exit_funcname TYPE funcname,
-      temp_field         TYPE REF TO data.
-    FIELD-SYMBOLS:
-      <temp_field>  TYPE any,
-      <source_comp> TYPE any,
-      <target_comp> TYPE any.
+    ##TODO " maybe find a cloud compliant way to do this, or remove this feature entirely
+    target = source.
 
-* ---------------------------------------------------------------------
-    IF ts_convex <> ts_parse.
-      ts_convex = ts_parse.
-      FREE comp_conv_exits.
-      structdescr ?= cl_abap_structdescr=>describe_by_data( target ).
-      LOOP AT structdescr->get_included_view( ) ASSIGNING FIELD-SYMBOL(<component>).
-        CAST cl_abap_elemdescr( <component>-type )->get_ddic_field( RECEIVING p_flddescr = DATA(field_descr)
-                                                                    EXCEPTIONS OTHERS = 1 ).
-        IF sy-subrc <> 0
-        OR field_descr-convexit IS INITIAL.
-          CONTINUE.
-        ENDIF.
-
-        CREATE DATA temp_field TYPE HANDLE <component>-type.
-        INSERT VALUE #( name     = <component>-name
-                        convexit = field_descr-convexit
-                        temp_fld = temp_field ) INTO TABLE comp_conv_exits.
-      ENDLOOP.
-    ENDIF.
-
-* ---------------------------------------------------------------------
-    LOOP AT comp_conv_exits ASSIGNING FIELD-SYMBOL(<comp_conv_exit>).
-      ASSIGN <comp_conv_exit>-temp_fld->* TO <temp_field>.
-      FREE <temp_field>.
-      ASSIGN COMPONENT <comp_conv_exit>-name OF STRUCTURE source TO <source_comp>.
-      ASSIGN COMPONENT <comp_conv_exit>-name OF STRUCTURE target TO <target_comp>.
-      conv_exit_funcname = 'CONVERSION_EXIT_' && <comp_conv_exit>-convexit && '_INPUT'.
-      CALL FUNCTION conv_exit_funcname
-        EXPORTING
-          input  = <source_comp>
-        IMPORTING
-          output = <temp_field>
-        EXCEPTIONS
-          OTHERS = 1.
-      IF sy-subrc = 0.
-        <target_comp> = <temp_field>.
-      ENDIF.
-    ENDLOOP.
-
-* ---------------------------------------------------------------------
+** ---------------------------------------------------------------------
+*    DATA:
+*      structdescr        TYPE REF TO cl_abap_structdescr,
+*      conv_exit_funcname TYPE c length 30, " funcname,
+*      temp_field         TYPE REF TO data.
+*    FIELD-SYMBOLS:
+*      <temp_field>  TYPE any,
+*      <source_comp> TYPE any,
+*      <target_comp> TYPE any.
+*
+** ---------------------------------------------------------------------
+*    IF ts_convex <> ts_parse.
+*      ts_convex = ts_parse.
+*      FREE comp_conv_exits.
+*      structdescr ?= cl_abap_structdescr=>describe_by_data( target ).
+*      LOOP AT structdescr->get_included_view( ) ASSIGNING FIELD-SYMBOL(<component>).
+*        CAST cl_abap_elemdescr( <component>-type )->get_ddic_field( RECEIVING p_flddescr = DATA(field_descr)
+*                                                                    EXCEPTIONS OTHERS = 1 ).
+*        IF sy-subrc <> 0
+*        OR field_descr-convexit IS INITIAL.
+*          CONTINUE.
+*        ENDIF.
+*
+*        CREATE DATA temp_field TYPE HANDLE <component>-type.
+*        INSERT VALUE #( name     = <component>-name
+*                        convexit = field_descr-convexit
+*                        temp_fld = temp_field ) INTO TABLE comp_conv_exits.
+*      ENDLOOP.
+*    ENDIF.
+*
+** ---------------------------------------------------------------------
+*    LOOP AT comp_conv_exits ASSIGNING FIELD-SYMBOL(<comp_conv_exit>).
+*      ASSIGN <comp_conv_exit>-temp_fld->* TO <temp_field>.
+*      FREE <temp_field>.
+*      ASSIGN COMPONENT <comp_conv_exit>-name OF STRUCTURE source TO <source_comp>.
+*      ASSIGN COMPONENT <comp_conv_exit>-name OF STRUCTURE target TO <target_comp>.
+*      conv_exit_funcname = 'CONVERSION_EXIT_' && <comp_conv_exit>-convexit && '_INPUT'.
+*      CALL FUNCTION conv_exit_funcname
+*        EXPORTING
+*          input  = <source_comp>
+*        IMPORTING
+*          output = <temp_field>
+*        EXCEPTIONS
+*          OTHERS = 1.
+*      IF sy-subrc = 0.
+*        <target_comp> = <temp_field>.
+*      ENDIF.
+*    ENDLOOP.
+*
+** ---------------------------------------------------------------------
   ENDMETHOD.
 
 
@@ -243,51 +246,51 @@ CLASS zcl_wd_csv IMPLEMENTATION.
 
 
   METHOD generate_cell.
-* ---------------------------------------------------------------------
-    DATA:
-      cell    TYPE c LENGTH 200, " randomly selected, should be enough right?
-      delimit TYPE abap_bool.
-
-* ---------------------------------------------------------------------
-    CASE conv_exit.
-      WHEN abap_true.
-        WRITE value TO cell LEFT-JUSTIFIED.
-        result = cell.
-      WHEN abap_false.
-        result = value.
-    ENDCASE.
-
-* ---------------------------------------------------------------------
-    IF trim_spaces_enabled = abap_true.
-      CONDENSE result.
-    ENDIF.
-
-* ---------------------------------------------------------------------
-    " escape quotes
-    IF find( val = result sub = delimiter ) >= 0.
-      delimit = abap_true.
-      result = replace( val  = result
-                        sub  = delimiter
-                        occ  = 0
-                        with = delimiter && delimiter ).
-    ENDIF.
-
-* ---------------------------------------------------------------------
-    " if the cell contains a separator or any newline character, it needs to be delimited
-    IF delimit = abap_false
-    AND (    find( val = result sub = separator                          ) >= 0
-          OR find( val = result sub = cl_abap_char_utilities=>cr_lf      ) >= 0
-          OR find( val = result sub = cl_abap_char_utilities=>cr_lf+0(1) ) >= 0
-          OR find( val = result sub = cl_abap_char_utilities=>cr_lf+1(1) ) >= 0 ).
-      delimit = abap_true.
-    ENDIF.
-
-* ---------------------------------------------------------------------
-    IF delimit = abap_true.
-      result = delimiter && result && delimiter.
-    ENDIF.
-
-* ---------------------------------------------------------------------
+** ---------------------------------------------------------------------
+*    DATA:
+*      cell    TYPE c LENGTH 200, " randomly selected, should be enough right?
+*      delimit TYPE abap_bool.
+*
+** ---------------------------------------------------------------------
+*    CASE conv_exit.
+*      WHEN abap_true.
+*        WRITE value TO cell LEFT-JUSTIFIED.
+*        result = cell.
+*      WHEN abap_false.
+*        result = value.
+*    ENDCASE.
+*
+** ---------------------------------------------------------------------
+*    IF trim_spaces_enabled = abap_true.
+*      CONDENSE result.
+*    ENDIF.
+*
+** ---------------------------------------------------------------------
+*    " escape quotes
+*    IF find( val = result sub = delimiter ) >= 0.
+*      delimit = abap_true.
+*      result = replace( val  = result
+*                        sub  = delimiter
+*                        occ  = 0
+*                        with = delimiter && delimiter ).
+*    ENDIF.
+*
+** ---------------------------------------------------------------------
+*    " if the cell contains a separator or any newline character, it needs to be delimited
+*    IF delimit = abap_false
+*    AND (    find( val = result sub = separator                          ) >= 0
+*          OR find( val = result sub = cl_abap_char_utilities=>cr_lf      ) >= 0
+*          OR find( val = result sub = cl_abap_char_utilities=>cr_lf+0(1) ) >= 0
+*          OR find( val = result sub = cl_abap_char_utilities=>cr_lf+1(1) ) >= 0 ).
+*      delimit = abap_true.
+*    ENDIF.
+*
+** ---------------------------------------------------------------------
+*    IF delimit = abap_true.
+*      result = delimiter && result && delimiter.
+*    ENDIF.
+*
+** ---------------------------------------------------------------------
   ENDMETHOD.
 
 
@@ -446,31 +449,31 @@ CLASS zcl_wd_csv IMPLEMENTATION.
       <target_line>  TYPE any,  " line of export table
       <string_comp>  TYPE data. " character
 
-    DEFINE append_line.
-**********************************************************************
-      APPEND INITIAL LINE TO target_table ASSIGNING <target_line>.
-      IF has_header = abap_true.
-        curr_line = sy-tabix + 1.
-      ELSE.
-        curr_line = sy-tabix.
-      ENDIF.
-      component = 1.
-      ASSIGN COMPONENT component OF STRUCTURE <string_struc> TO <string_comp>.
-**********************************************************************
-    END-OF-DEFINITION.
-
-    DEFINE append_character.
-**********************************************************************
-      <string_comp> = <string_comp> && csv_string+str_pos(1).
-**********************************************************************
-    END-OF-DEFINITION.
-
-    DEFINE continue_loop.
-**********************************************************************
-      str_pos = str_pos + 1.
-      CONTINUE.
-**********************************************************************
-    END-OF-DEFINITION.
+***    DEFINE append_line.
+*************************************************************************
+***      APPEND INITIAL LINE TO target_table ASSIGNING <target_line>.
+***      IF has_header = abap_true.
+***        curr_line = sy-tabix + 1.
+***      ELSE.
+***        curr_line = sy-tabix.
+***      ENDIF.
+***      component = 1.
+***      ASSIGN COMPONENT component OF STRUCTURE <string_struc> TO <string_comp>.
+*************************************************************************
+***    END-OF-DEFINITION.
+***
+***    DEFINE append_character.
+*************************************************************************
+***      <string_comp> = <string_comp> && csv_string+str_pos(1).
+*************************************************************************
+***    END-OF-DEFINITION.
+***
+***    DEFINE continue_loop.
+*************************************************************************
+***      str_pos = str_pos + 1.
+***      CONTINUE.
+*************************************************************************
+***    END-OF-DEFINITION.
 
 * ---------------------------------------------------------------------
     FREE: target_table, header_columns.
@@ -485,10 +488,22 @@ CLASS zcl_wd_csv IMPLEMENTATION.
 
 * ---------------------------------------------------------------------
     str_length = strlen( csv_string ).
+    IF str_length = 0.
+      RETURN.
+    ENDIF.
 
 * ---------------------------------------------------------------------
     " first line
-    append_line.
+    " append_line.
+    APPEND INITIAL LINE TO target_table ASSIGNING <target_line>.
+    IF has_header = abap_true.
+      curr_line = sy-tabix + 1.
+    ELSE.
+      curr_line = sy-tabix.
+    ENDIF.
+    component = 1.
+    ASSIGN COMPONENT component OF STRUCTURE <string_struc> TO <string_comp>.
+
 
 * ---------------------------------------------------------------------
     DO.
@@ -501,16 +516,23 @@ CLASS zcl_wd_csv IMPLEMENTATION.
               IF ( str_length - str_pos ) >= 2 " make sure at least two characters are left in the string
               AND csv_string+str_pos(2) = delimiter && delimiter.
                 " if the current csv cell is delimited and double double quotes are in it, add one of them to the abap cell
-                append_character.
+                " append_character.
+                <string_comp> = <string_comp> && csv_string+str_pos(1).
                 str_pos = str_pos + 1.
-                continue_loop.
+                " continue_loop.
+                str_pos = str_pos + 1.
+                CONTINUE.
               ELSE.
                 delimited = abap_false.
               ENDIF.
           ENDCASE.
         WHEN separator.
           IF delimited = abap_true.
-            append_character. continue_loop.
+            " append_character.
+            <string_comp> = <string_comp> && csv_string+str_pos(1).
+            " continue_loop.
+            str_pos = str_pos + 1.
+            CONTINUE.
           ENDIF.
           in_cell = abap_false.
           component = component + 1.
@@ -525,7 +547,11 @@ CLASS zcl_wd_csv IMPLEMENTATION.
           ENDIF.
         WHEN c_endofline_lf OR c_endofline_cr_lf(1).
           IF delimited = abap_true.
-            append_character. continue_loop.
+            " append_character.
+            <string_comp> = <string_comp> && csv_string+str_pos(1).
+            " continue_loop.
+            str_pos = str_pos + 1.
+            CONTINUE.
           ENDIF.
           IF  first_line = abap_true
           AND has_header = abap_true.
@@ -542,7 +568,9 @@ CLASS zcl_wd_csv IMPLEMENTATION.
             IF endofline = c_endofline_cr_lf.
               str_pos = str_pos + 1.
             ENDIF.
-            continue_loop.
+            " continue_loop.
+            str_pos = str_pos + 1.
+            CONTINUE.
           ENDIF.
           IF (     endofline = c_endofline_cr_lf
                AND csv_string+str_pos(2) <> c_endofline_cr_lf )
@@ -585,7 +613,17 @@ CLASS zcl_wd_csv IMPLEMENTATION.
           ENDIF.
           move_data( CHANGING source = <string_struc>
                               target = <target_line> ).
-          append_line.
+          " append_line.
+          APPEND INITIAL LINE TO target_table ASSIGNING <target_line>.
+          IF has_header = abap_true.
+            curr_line = sy-tabix + 1.
+          ELSE.
+            curr_line = sy-tabix.
+          ENDIF.
+          component = 1.
+          ASSIGN COMPONENT component OF STRUCTURE <string_struc> TO <string_comp>.
+
+
           IF endofline = c_endofline_cr_lf.
             " advance position because crlf is two characters
             str_pos = str_pos + 1.
@@ -593,18 +631,26 @@ CLASS zcl_wd_csv IMPLEMENTATION.
         WHEN ` `.
           IF delimited = abap_true
           OR in_cell   = abap_true.
-            append_character. continue_loop.
+            " append_character.
+            <string_comp> = <string_comp> && csv_string+str_pos(1).
+            " continue_loop.
+            str_pos = str_pos + 1.
+            CONTINUE.
           ELSE.
             IF trim_spaces_enabled = abap_true.
               " ignore space if not currently in cell or delimited
-              continue_loop.
+              " continue_loop.
+              str_pos = str_pos + 1.
+              CONTINUE.
             ELSE.
-              append_character.
+              " append_character.
+              <string_comp> = <string_comp> && csv_string+str_pos(1).
             ENDIF.
           ENDIF.
         WHEN OTHERS.
           in_cell = abap_true.
-          append_character.
+          " append_character.
+          <string_comp> = <string_comp> && csv_string+str_pos(1).
       ENDCASE.
       IF ( str_pos + 1 ) = str_length.
         IF component < string_struc-columns.
@@ -667,12 +713,11 @@ CLASS zcl_wd_csv IMPLEMENTATION.
 * ---------------------------------------------------------------------
   ENDMETHOD.
 
-
   METHOD set_separator.
-* ---------------------------------------------------------------------
-    IF  separator IS NOT INITIAL
-    AND separator NA sy-abcde
-    AND separator NA '0123456789'.
+    "  ---------------------------------------------------------------------
+    IF     separator             IS NOT INITIAL
+       AND to_upper( separator ) NA 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' " sy-abcde
+       AND separator             NA '0123456789'.
       me->separator = separator.
     ELSE.
       RAISE EXCEPTION TYPE zcx_wd_csv_invalid_separator
@@ -680,7 +725,7 @@ CLASS zcl_wd_csv IMPLEMENTATION.
           separator = separator.
     ENDIF.
 
-* ---------------------------------------------------------------------
+    "  ---------------------------------------------------------------------
   ENDMETHOD.
 
 
