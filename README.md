@@ -6,3 +6,4 @@ The Parser should respect [RFC 4180](https://tools.ietf.org/html/rfc4180), espec
 Class ZCL_WD_CSV contains Methods PARSE_STRING and GENERATE_STRING for directly handling csv strings.  
 
 This is the abap cloud compatible successor to [ZwdCSV](https://github.com/WegnerDan/ZwdCSV)
+Currently, the conversion exit stuff is not working and there might be no way to include this in the ABAP Cloud version. 
