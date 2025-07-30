@@ -244,53 +244,62 @@ CLASS zcl_wd_csv IMPLEMENTATION.
 * ---------------------------------------------------------------------
   ENDMETHOD.
 
-
   METHOD generate_cell.
-** ---------------------------------------------------------------------
-*    DATA:
-*      cell    TYPE c LENGTH 200, " randomly selected, should be enough right?
-*      delimit TYPE abap_bool.
-*
-** ---------------------------------------------------------------------
-*    CASE conv_exit.
-*      WHEN abap_true.
-*        WRITE value TO cell LEFT-JUSTIFIED.
-*        result = cell.
-*      WHEN abap_false.
-*        result = value.
-*    ENDCASE.
-*
-** ---------------------------------------------------------------------
-*    IF trim_spaces_enabled = abap_true.
-*      CONDENSE result.
-*    ENDIF.
-*
-** ---------------------------------------------------------------------
-*    " escape quotes
-*    IF find( val = result sub = delimiter ) >= 0.
-*      delimit = abap_true.
-*      result = replace( val  = result
-*                        sub  = delimiter
-*                        occ  = 0
-*                        with = delimiter && delimiter ).
-*    ENDIF.
-*
-** ---------------------------------------------------------------------
-*    " if the cell contains a separator or any newline character, it needs to be delimited
-*    IF delimit = abap_false
-*    AND (    find( val = result sub = separator                          ) >= 0
-*          OR find( val = result sub = cl_abap_char_utilities=>cr_lf      ) >= 0
-*          OR find( val = result sub = cl_abap_char_utilities=>cr_lf+0(1) ) >= 0
-*          OR find( val = result sub = cl_abap_char_utilities=>cr_lf+1(1) ) >= 0 ).
-*      delimit = abap_true.
-*    ENDIF.
-*
-** ---------------------------------------------------------------------
-*    IF delimit = abap_true.
-*      result = delimiter && result && delimiter.
-*    ENDIF.
-*
-** ---------------------------------------------------------------------
+    " TODO: parameter FIELDNAME is never used (ABAP cleaner)
+    " TODO: parameter FIELDTYPE is never used (ABAP cleaner)
+
+    "  ---------------------------------------------------------------------
+    DATA:
+      cell    TYPE c LENGTH 200, " randomly selected, should be enough right?
+      delimit TYPE abap_bool.
+
+    "  ---------------------------------------------------------------------
+    CASE conv_exit.
+      WHEN abap_true.
+        ##TODO " WRITE is not supported in abap cloud
+        " WRITE value TO cell LEFT-JUSTIFIED.
+        cell = value.
+        result = cell.
+      WHEN abap_false.
+        result = value.
+    ENDCASE.
+
+    "  ---------------------------------------------------------------------
+    IF trim_spaces_enabled = abap_true.
+      result = condense( result ).
+    ENDIF.
+
+    "  ---------------------------------------------------------------------
+    " escape quotes
+    IF find( val = result
+             sub = delimiter ) >= 0.
+      delimit = abap_true.
+      result = replace( val  = result
+                        sub  = delimiter
+                        occ  = 0
+                        with = delimiter && delimiter ).
+    ENDIF.
+
+    "  ---------------------------------------------------------------------
+    " if the cell contains a separator or any newline character, it needs to be delimited
+    IF     delimit = abap_false
+       AND (    find( val = result
+                      sub = separator                          ) >= 0
+             OR find( val = result
+                      sub = cl_abap_char_utilities=>cr_lf      ) >= 0
+             OR find( val = result
+                      sub = cl_abap_char_utilities=>cr_lf+0(1) ) >= 0
+             OR find( val = result
+                      sub = cl_abap_char_utilities=>cr_lf+1(1) ) >= 0 ).
+      delimit = abap_true.
+    ENDIF.
+
+    "  ---------------------------------------------------------------------
+    IF delimit = abap_true.
+      result = delimiter && result && delimiter.
+    ENDIF.
+
+    "  ---------------------------------------------------------------------
   ENDMETHOD.
 
 
