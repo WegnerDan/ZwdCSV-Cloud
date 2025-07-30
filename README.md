@@ -8,3 +8,6 @@ Class ZCL_WD_CSV contains Methods PARSE_STRING and GENERATE_STRING for directly 
 This is the abap cloud compatible successor to [ZwdCSV](https://github.com/WegnerDan/ZwdCSV)  
 
 Currently, the conversion exit stuff is not working and there might be no way to include this in the ABAP Cloud version. 
+
+In ABAP Cloud there is no access to gui upload/download functions and (probably) no access to application server upload/download functions.
+Because of this, all the file handling stuff has been removed 
