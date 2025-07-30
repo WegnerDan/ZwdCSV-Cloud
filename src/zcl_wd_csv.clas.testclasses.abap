@@ -292,7 +292,10 @@ CLASS ltc_parse_string IMPLEMENTATION.
                                  csv_string   = csv
                        IMPORTING target_table = result ).
 
-    cl_abap_unit_assert=>assert_initial( act = result
-                                         msg = 'CSV with only whitespace should result in empty table' ).
+    " RFC 4180 does not specify what exactly should lead to empty output
+    " for now an empty csv row shall result in an empty result table row
+    " while also respecting blanks (as long as trim_spaces is not enabled)
+    cl_abap_unit_assert=>assert_equals( exp = VALUE ty_test_table( ( field1 = `   ` field2 = `` field3 = `` ) )
+                                        act = result ).
   ENDMETHOD.
 ENDCLASS.
